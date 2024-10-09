@@ -9,6 +9,8 @@ import { Canvas, useFrame } from '@react-three/fiber';
 const Model: React.FC = () => {
     const ref = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isARActive, setIsARActive] = useState(false);
+    const [arButton, setARButton] = useState<HTMLButtonElement | null>(null);
     const [modelRotation, setModelRotation] = useState(new THREE.Euler(0, 0, 0));
   
     useEffect(() => {
@@ -24,7 +26,7 @@ const Model: React.FC = () => {
   
       const loader = new THREE.GLTFLoader();
       loader.load(
-        '/dog.glb',
+        '../app/dog.glb',
         (gltf) => {
           const model = gltf.scene;
           model.rotation.setFromEuler(modelRotation);
@@ -72,12 +74,45 @@ const Model: React.FC = () => {
       };
     }, []);
   
+    useEffect(() => {
+      if (isARActive) {
+        const session = document.querySelector<HTMLCanvasElement>('canvas')?.getContext(
+          'xr'
+        )?.requestSession({
+          requiredFeatures: ['local-floor'],
+        });
+  
+        if (session) {
+          session.addEventListener('end', () => {
+            setIsARActive(false);
+          });
+        }
+      }
+    }, [isARActive]);
+  
     return (
       <div ref={ref} className="w-full h-64 bg-gray-300">
         {isLoading && (
           <div className="flex items-center justify-center h-full">
             <p>Loading...</p>
           </div>
+        )}
+        {!isLoading && (
+          <Canvas
+            camera={{ position: [0, 0, 3] }}
+            onCreated={({ gl, camera }) => {
+              const arButton = new ARButton(renderer, {
+                sessionInit: {
+                  requiredFeatures: ['local-floor'],
+                },
+              });
+              setARButton(arButton);
+              container.appendChild(arButton);
+            }}
+          >
+            <ambientLight intensity={0.5} />
+            <spotLight position={[10, 10, 10]} angle={0.4} />
+          </Canvas>
         )}
       </div>
     );
